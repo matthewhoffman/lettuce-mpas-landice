@@ -38,7 +38,7 @@ def get_test_case(step, test, velocity_solver):
 	world.num_runs = 0
 
 	# If we don't have the test case tarball, then go get it.
-	if not os.path.exists("%s/%s.tgz"%(world.basedir, world.rundir)):
+	if not os.path.exists("%s/%s.tar.gz"%(world.basedir, world.rundir)):
 		arg = "https://dl.dropboxusercontent.com/u/30481359/%s.tar.gz"%(world.rundir)
 		subprocess.call(['wget', '--no-check-certificate', arg], stdout=dev_null, stderr=dev_null)
 
@@ -57,7 +57,7 @@ def get_test_case(step, test, velocity_solver):
 		world.develop_exists = True
 		command = "ln"
 		arg1 = "-s"
-		arg2 = "../ocean_model_develop"
+		arg2 = "../landice_model_develop"
 		subprocess.call([command, arg1, arg2], stdout=dev_null, stderr=dev_null)
 	else:
 		world.develop_exists = False
@@ -136,8 +136,8 @@ def run_mpas(step, procs):
 	arg3 = "landice_model"
 	subprocess.call([command, arg1, arg2, arg3], stdout=dev_null, stderr=dev_null)
 	command = "mv"
-	#arg1 = "output.0000-01-01_00.00.00.nc"
-	arg1 = "output.nc"
+	arg1 = "output.0000-01-01_00.00.00.nc"
+	#arg1 = "output.nc"
 	arg2 = "%sprocs.output.nc"%procs
 	subprocess.call([command, arg1, arg2], stdout=dev_null, stderr=dev_null)
 	if world.num_runs == 0:
@@ -166,8 +166,8 @@ def run_mpas(step, procs):
 		arg3 = "landice_model_develop"
 		subprocess.call([command, arg1, arg2, arg3], stdout=dev_null, stderr=dev_null)
 		command = "mv"
-		#arg1 = "output.0000-01-01_00.00.00.nc"
-		arg1 = "output.nc"
+		arg1 = "output.0000-01-01_00.00.00.nc"
+		#arg1 = "output.nc"
 		arg2 = "%sprocs.output.develop.nc"%procs
 		subprocess.call([command, arg1, arg2], stdout=dev_null, stderr=dev_null)
 		if world.num_runs == 0:
@@ -293,6 +293,8 @@ def compute_rms(step, variable):
 	else:
 		print 'Less than two runs. Skipping RMS computation.'
 
+@step('I compute the RMS of halfar')
+
 @step('I see "([^"]*)" RMS of 0')
 def check_rms_values(step, variable):
 	if world.num_runs == 2:
@@ -300,6 +302,16 @@ def check_rms_values(step, variable):
 	else:
 		print 'Less than two runs. Skipping RMS check.'
 
+@step('I compute the Halfar RMS')
+def compute_rms(step):
+	world.halfarRMS=float(subprocess.check_output('python ' + world.rundir + '/halfar.py -f ' + world.rundir + '/' +  world.run1 + ' -n | grep "^* RMS error =" | cut -d "=" -f 2 \n', shell='/bin/bash'))
+
+@step('I see Halfar RMS of <20')
+def check_rms_values(step):
+	if world.halfarRMS == []:
+		assert False, 'Calculation of Halfar RMS failed.'
+	else:
+		assert world.halfarRMS < 20.0, 'Halfar RMS of %s is greater than 20.0 m'%world.halfarRMS
 
 @step('I clean the test directory')
 def clean_test(step):
@@ -307,3 +319,5 @@ def clean_test(step):
 	arg1 = "-rf"
 	arg2 = world.rundir
 	subprocess.call([command, arg1, arg2], stdout=dev_null, stderr=dev_null)
+
+
